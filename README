@@ -1,0 +1,36 @@
+Tools for sampling and reconstruction in q-space diffusion MRI
+--------------------------------------------------------------
+Disclaimer
+----------
+THERE IS NO WARRANTY FOR THE SAMPLING SCHEMES GENERATED WITH THIS TOOL, TO THE
+EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE
+COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE SAMPLING SCHEME “AS IS”
+WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE QUALITY OF THE SAMPLING SCHEME IS
+WITH YOU. SHOULD THE SAMPLING SCHEME PROVE DEFECTIVE, YOU ASSUME THE COST OF
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+
+Install
+-------
+To install, run 
+> python setup.py install --prefix=~/local
+
+You will need to add ~/local/lib/python2.7/site-packages to your PYTHONPATH. If
+you are using bash, then edit the ~/.bashrc file and add the following line:
+
+export PYTHONPATH=~/local/lib/python2.7/site-packages:${PYTHONPATH}
+
+References
+----------
+For any use of the multiple shell sampling tool, please kindly cite the
+following paper [1]. For the use of reconstruction in the mSPH basis, please
+kindly cite [2].
+
+1. Caruyer, Emmanuel, Christophe Lenglet, Guillermo Sapiro, and Rachid Deriche.
+"Design of multishell sampling schemes with uniform coverage in diffusion MRI."
+Magnetic Resonance in Medicine 69, no. 6 (2013): 1534-1540.
+2. Caruyer, Emmanuel, and Rachid Deriche. "Diffusion MRI signal reconstruction
+with continuity constraint and optimal regularization." Medical Image Analysis
+16, no. 6 (2012): 1113-1120.
+

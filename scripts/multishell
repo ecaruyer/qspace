@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+from __future__ import division
+import numpy as np
+import argparse
+
+from qspace.sampling import multishell as ms
+from qspace.visu import visu_points
+
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import axes3d, art3d
+
+parser = argparse.ArgumentParser()
+parser.add_argument("points_per_shell", nargs="+", type=int,
+    help="Number of points per shell.")
+parser.add_argument("-o", dest="output", help="Output basename.")
+args = parser.parse_args()
+
+
+nb_shells = len(args.points_per_shell)
+K = np.sum(args.points_per_shell)
+
+# Relative shell radii (for visualization)
+rs = (np.arange(nb_shells) + 1) / nb_shells
+
+# Groups of shells and coupling weights
+shell_groups = [[i] for i in range(nb_shells)]
+shell_groups.append(range(nb_shells))
+alphas = np.ones(len(shell_groups))
+
+weights = ms.compute_weights(nb_shells, args.points_per_shell, shell_groups, 
+                             alphas)
+
+# Where the optimized sampling scheme is computed
+points = ms.optimize(nb_shells, args.points_per_shell, weights, max_iter=1000)
+
+if args.output:
+    basename = args.output
+else:
+    basename = '%02d-shells-%s' % \
+        (nb_shells, '-'.join(str(K_s) for K_s in args.points_per_shell))
+
+# Save file ...
+filename = '%s.txt' % basename
+ms.write(points, nb_shells, args.points_per_shell, filename)
+
+
+# Visualize points
+# Visualization of each shell
+fig = plt.figure(figsize=(3.0 * nb_shells, 3.0))
+spacing = 0.05
+plt.subplots_adjust(left=spacing/nb_shells,
+                   right=1 - spacing/nb_shells, 
+                   bottom=spacing,
+                   top=1 - spacing,
+                   wspace=2*spacing/nb_shells)
+visu_points.draw_points_sphere(points, nb_shells, args.points_per_shell, rs, 
+                               fig)
+plt.suptitle("Individual shells")
+plt.savefig("%s-shells.png" % basename, dpi=200)
+
+
+# Visualization after reprojecting all shells to the unit sphere
+fig = plt.figure(figsize=(3.0, 3.0))
+ax = fig.add_subplot(111, projection='3d', aspect='equal')
+plt.subplots_adjust(left=spacing/nb_shells,
+                   right=1 - spacing/nb_shells, 
+                   bottom=spacing,
+                   top=1 - spacing,
+                   wspace=2*spacing/nb_shells)
+visu_points.draw_points_reprojected(points, nb_shells, args.points_per_shell, 
+                                    rs, ax)
+plt.suptitle("Shells reprojected")
+plt.savefig("%s-shells-reprojected.png" % basename, dpi=200)
+
