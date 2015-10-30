@@ -18,9 +18,9 @@ parser.add_argument("-r", dest="bvecs", required=True,
 parser.add_argument("-m", dest="mask", 
     help="Path to mask image (a binary image in a format that nibabel can "
          "handle).")
-parser.add_argument("-n", dest="radial_order", default=3,
+parser.add_argument("-n", dest="radial_order", type=int, default=3,
     help="Radial truncation order of the (m)SPF basis. (%(default)s)")
-parser.add_argument("-l", dest="angular_rank", default=6,
+parser.add_argument("-l", dest="angular_rank", type=int, default=6,
     help="Angular truncation rank of the (m)SPF basis. (%(default)s)")
 parser.add_argument("-t", dest="tau", type=float, default=50.0,
     help="Diffusion time of the acquisition sequence in ms (%(default)s).")
@@ -49,6 +49,7 @@ dwis_img = nib.load(args.dwis)
 dwis = dwis_img.get_data()
 dim_x, dim_y, dim_z = dwis.shape[:3]
 K = dwis.shape[-1]
+affine = dwis_img.get_affine()
 
 if args.mask is not None:
     mask_img = nib.load(args.mask)
@@ -107,5 +108,5 @@ for i, j, k in zip(*np.nonzero(mask)):
         spf_coefficients[i, j, k].reshape((args.radial_order, dim_sh))
     odf_coefficients[i, j, k] = spherical_polar_fourier.odf_marginal()
 
-odf_img = nib.Nifti1Image(odf, dwis_img.get_affine())
+odf_img = nib.Nifti1Image(odf_coefficients, affine)
 nib.save(odf_img, "odf.nii.gz")
