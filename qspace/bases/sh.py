@@ -8,7 +8,6 @@ import numpy as np
 from scipy.special import lpmv, gamma, hyp1f1, legendre
 from scipy.special.orthogonal import genlaguerre
 from scipy.misc import factorial
-from sampling import *
 
 
 _default_rank = 4
@@ -82,21 +81,21 @@ class SphericalHarmonics:
                 j = index_j(l, m)
                 if coefs[j] != 0.0:
                     if m < 0:
-                        result += coefs[j] * sqrt(2)         \
-                        * sqrt((2*l + 1) * factorial(l + m)  \
-                        / (4 * pi * factorial(l - m)))       \
+                        result += coefs[j] * np.sqrt(2)         \
+                        * np.sqrt((2*l + 1) * factorial(l + m)  \
+                        / (4 * np.pi * factorial(l - m)))       \
                         * (-1) ** (-m)                       \
-                        * lpmv(-m, l, cos(theta)) * cos(m * phi)  
+                        * lpmv(-m, l, np.cos(theta)) * np.cos(m * phi)  
                     if m == 0:
                         result += coefs[j]                   \
-                        * sqrt((2*l + 1) * factorial(l - m)  \
-                        / (4 * pi * factorial(l + m)))       \
-                        * lpmv(m, l, cos(theta))
+                        * np.sqrt((2*l + 1) * factorial(l - m)  \
+                        / (4 * np.pi * factorial(l + m)))       \
+                        * lpmv(m, l, np.cos(theta))
                     if m > 0:
-                        result += coefs[j] * sqrt(2)         \
-                        * sqrt((2*l + 1) * factorial(l - m)  \
-                        / (4 * pi * factorial(l + m)))       \
-                        * lpmv(m, l, cos(theta)) * sin(m * phi)
+                        result += coefs[j] * np.sqrt(2)         \
+                        * np.sqrt((2*l + 1) * factorial(l - m)  \
+                        / (4 * np.pi * factorial(l + m)))       \
+                        * lpmv(m, l, np.cos(theta)) * np.sin(m * phi)
         return result
 
 
@@ -112,7 +111,7 @@ def index_j(l, m):
     # l is between 0 and rankSH, m is btw -l and l
     if np.abs(m) > l:
         raise NameError('SphericalHarmonics.j: m must lie in [-l, l]')
-    return int(l + m + (2 * array(range(0, l, 2)) + 1).sum())
+    return int(l + m + (2 * np.array(range(0, l, 2)) + 1).sum())
 
 
 def index_l(j):
@@ -184,4 +183,3 @@ def P(rank=_default_rank):
         l =  index_l(j)
         P[j, j] = 2 * np.pi * legendre(l)(0)
     return P
-
