@@ -16,7 +16,7 @@ def equality_constraints(vects, *args):
     -------
     array shape (N,) : Difference between squared vector norms and 1.
     """
-    N = vects.shape[0] / 3
+    N = vects.shape[0] // 3
     vects = vects.reshape((N, 3))
     return (vects ** 2).sum(1) - 1.0
 
@@ -35,7 +35,7 @@ def grad_equality_constraints(vects, *args):
     array shape (N, N * 3). grad[i, j] contains
     $\partial f_i / \partial x_j$
     """
-    N = vects.shape[0] / 3
+    N = vects.shape[0] // 3
     vects = vects.reshape((N, 3))
     vects = (vects.T / np.sqrt((vects ** 2).sum(1))).T
     grad = np.zeros((N, N * 3))
@@ -143,7 +143,7 @@ def grad_cost(vects, S, Ks, weights):
         weighting parameter, control coupling between shells and how this
         balances.
     """
-    K = vects.shape[0] / 3
+    K = vects.shape[0] // 3
     grad = np.zeros(3 * K)
     indices = np.cumsum(Ks).tolist()
     indices.insert(0, 0)
