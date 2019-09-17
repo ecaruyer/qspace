@@ -44,7 +44,7 @@ def grad_equality_constraints(vects, *args):
     return grad
 
 	
-def f(vects, weight_matrix, alpha=1.0):
+def f(vects, weight_matrix, antipodal=True, alpha=1.0):
     """
     Electrostatic-repulsion objective function. The alpha paramter controls
     the power repulsion (energy varies as $1 / r^alpha$).
@@ -68,13 +68,15 @@ def f(vects, weight_matrix, alpha=1.0):
     for i in range(N):
         indices = (np.arange(N) > i)
         diffs = ((vects[indices] - vects[i]) ** 2).sum(1) ** alpha
-        sums  = ((vects[indices] + vects[i]) ** 2).sum(1) ** alpha
-        energy += (weight_matrix[i, indices] * \
-                   (1.0 / (diffs + epsilon) + 1.0 / (sums + epsilon))).sum()
+        energy += (weight_matrix[i, indices] * (1.0 / (diffs + epsilon))).sum()
+        if antipodal:
+            sums  = ((vects[indices] + vects[i]) ** 2).sum(1) ** alpha
+            energy += (weight_matrix[i, indices] * \
+                       (1.0 / (sums + epsilon))).sum()
     return energy
 
 
-def grad_f(vects, weight_matrix, alpha=1.0):
+def grad_f(vects, weight_matrix, antipodal=True, alpha=1.0):
     """
     1st-order derivative of electrostatic-like repulsion energy.
 
@@ -96,16 +98,17 @@ def grad_f(vects, weight_matrix, alpha=1.0):
     for i in range(N):
         indices = (np.arange(N) != i)
         diffs = ((vects[indices] - vects[i]) ** 2).sum(1) ** (alpha + 1)
-        sums  = ((vects[indices] + vects[i]) ** 2).sum(1) ** (alpha + 1)
-        grad[i] += (- 2 * alpha * weight_matrix[i, indices] * \
+        grad[i] = (- 2 * alpha * weight_matrix[i, indices] * \
                     (vects[i] - vects[indices]).T / diffs).sum(1)
-        grad[i] += (- 2 * alpha * weight_matrix[i, indices] * \
-                    (vects[i] + vects[indices]).T / sums).sum(1)
+        if antipodal:
+            sums  = ((vects[indices] + vects[i]) ** 2).sum(1) ** (alpha + 1)
+            grad[i] += (- 2 * alpha * weight_matrix[i, indices] * \
+                        (vects[i] + vects[indices]).T / sums).sum(1)
     grad = grad.reshape(N * 3)
     return grad
 
 
-def cost(vects, S, Ks, weights):
+def cost(vects, S, Ks, weights, antipodal=True):
     """
     Objective function for multiple-shell energy. 
 
@@ -127,10 +130,10 @@ def cost(vects, S, Ks, weights):
         for s2 in range(S):
             weight_matrix[indices[s1]:indices[s1 + 1], 
                           indices[s2]:indices[s2 + 1]] = weights[s1, s2]
-    return f(vects, weight_matrix)
+    return f(vects, weight_matrix, antipodal)
 
 
-def grad_cost(vects, S, Ks, weights):
+def grad_cost(vects, S, Ks, weights, antipodal=True):
     """
     gradient of the objective function for multiple shells sampling.
 
@@ -142,6 +145,7 @@ def grad_cost(vects, S, Ks, weights):
     weights : array-like, shep (S, S)
         weighting parameter, control coupling between shells and how this
         balances.
+    antipodal : bool
     """
     K = vects.shape[0] // 3
     grad = np.zeros(3 * K)
@@ -152,11 +156,11 @@ def grad_cost(vects, S, Ks, weights):
         for s2 in range(S):
             weight_matrix[indices[s1]:indices[s1 + 1], 
                           indices[s2]:indices[s2 + 1]] = weights[s1, s2]
+    return grad_f(vects, weight_matrix, antipodal)
 
-    return grad_f(vects, weight_matrix)
 
-
-def optimize(nb_shells, nb_points_per_shell, weights, max_iter=100):
+def optimize(nb_shells, nb_points_per_shell, weights, max_iter=100, 
+    antipodal=True, init_points=None):
     """
     Creates a set of sampling directions on the desired number of shells.
 
@@ -179,12 +183,14 @@ def optimize(nb_shells, nb_points_per_shell, weights, max_iter=100):
     K = np.sum(nb_points_per_shell)
     
     # Initialized with random directions
-    vects = random_uniform_on_sphere(K)
-    vects = vects.reshape(K * 3)
+    if init_points is None:
+        init_points = random_uniform_on_sphere(K)
+    vects = init_points.reshape(K * 3)
     
     vects = scopt.fmin_slsqp(cost, vects.reshape(K * 3), 
         f_eqcons=equality_constraints, fprime=grad_cost, iter=max_iter, 
-        acc=1.0e-9, args=(nb_shells, nb_points_per_shell, weights), iprint=2)
+        acc=1.0e-9, args=(nb_shells, nb_points_per_shell, weights, antipodal), 
+        iprint=2)
     vects = vects.reshape((K, 3))
     vects = (vects.T / np.sqrt((vects ** 2).sum(1))).T
     return vects
