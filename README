@@ -14,12 +14,7 @@ ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 Install
 -------
 To install, run 
-> python setup.py install --prefix=~/local
-
-You will need to add ~/local/lib/python2.7/site-packages to your PYTHONPATH. If
-you are using bash, then edit the ~/.bashrc file and add the following line:
-
-export PYTHONPATH=~/local/lib/python2.7/site-packages:${PYTHONPATH}
+> python setup.py install --user
 
 References
 ----------
