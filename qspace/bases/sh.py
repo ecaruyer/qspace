@@ -5,9 +5,8 @@
 ##########################################################################
 
 import numpy as np
-from scipy.special import lpmv, gamma, hyp1f1, legendre
+from scipy.special import lpmv, gamma, hyp1f1, legendre, factorial
 from scipy.special.orthogonal import genlaguerre
-from scipy.misc import factorial
 
 
 _default_rank = 4
