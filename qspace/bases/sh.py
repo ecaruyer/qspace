@@ -103,7 +103,7 @@ def dimension(rank):
     """Returns the dimension of the spherical harmonics basis for a given 
     rank.
     """
-    return (rank + 1) * (rank + 2) / 2
+    return int((rank + 1) * (rank + 2) / 2)
 
 
 def index_j(l, m):
