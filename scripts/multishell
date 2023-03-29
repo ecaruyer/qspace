@@ -61,7 +61,7 @@ plt.savefig("%s-shells.png" % basename, dpi=200)
 
 # Visualization after reprojecting all shells to the unit sphere
 fig = plt.figure(figsize=(3.0, 3.0))
-ax = fig.add_subplot(111, projection='3d', aspect='equal')
+ax = fig.add_subplot(111, projection='3d')
 plt.subplots_adjust(left=spacing/nb_shells,
                    right=1 - spacing/nb_shells, 
                    bottom=spacing,
