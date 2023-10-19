@@ -190,7 +190,7 @@ def optimize(nb_shells, nb_points_per_shell, weights, max_iter=100,
     vects = scopt.fmin_slsqp(cost, vects.reshape(K * 3), 
         f_eqcons=equality_constraints, fprime=grad_cost, iter=max_iter, 
         acc=1.0e-9, args=(nb_shells, nb_points_per_shell, weights, antipodal), 
-        iprint=2)
+        iprint=0)
     vects = vects.reshape((K, 3))
     vects = (vects.T / np.sqrt((vects ** 2).sum(1))).T
     return vects
