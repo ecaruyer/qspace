@@ -11,4 +11,5 @@ setup(name='qspace',
     scripts = [os.path.join('scripts', 'mspf_fit'),
                os.path.join('scripts', 'multishell')],
     package_data={'qspace.sampling' : ["data/jones_*.txt"]},
-    packages=['qspace', 'qspace.bases', 'qspace.sampling', 'qspace.visu'])
+    packages=['qspace', 'qspace.bases', 'qspace.sampling', 
+              'qspace.sampling.waveforms', 'qspace.visu'])
