@@ -12,4 +12,4 @@ setup(name='qspace',
                os.path.join('scripts', 'multishell')],
     package_data={'qspace.sampling' : ["data/jones_*.txt"]},
     packages=['qspace', 'qspace.bases', 'qspace.sampling', 
-              'qspace.sampling.waveforms', 'qspace.visu'])
+              'qspace.sampling.waveforms', 'qspace.visu', 'qspace.simul'])
