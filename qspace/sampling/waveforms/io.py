@@ -34,7 +34,6 @@ def write_mcdc(waveforms, dt, filename):
     schemefile.close()
 
 
-
 def write_camino(waveforms, dt, filename):
     """
     Prepares and writes a Camino-compatible scheme file from a collection of 
