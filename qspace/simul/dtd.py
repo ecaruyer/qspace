@@ -13,6 +13,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from qspace.sampling import multishell as ms
 from qspace.sampling import sphere
+import functools
 
 
 # Let's define the isotropic 4th order tensor, the bulk and shear modulus
@@ -76,10 +77,20 @@ class DTD(ABC):
         distribution."""
         s = self.second_moment()
         d = voigt_6(self.first_moment())
-        print(np.outer(d, d).shape, _e_shear.shape)
         op_squared = np.sum(np.outer(d, d) * _e_shear) 
         op_squared /= np.sum(s * _e_shear)
         return np.sqrt(op_squared)
+
+
+    def size_variance(self):
+        """Computes the orientation parameter of the diffusion tensor 
+        distribution."""
+        s = self.second_moment()
+        d = voigt_6(self.first_moment())
+        c = s - np.outer(d, d)
+        c_md = np.sum(c * _e_bulk) / np.sum(s * _e_bulk)
+        return c_md
+
 
 
 class DiscreteDTD(DTD):
@@ -111,9 +122,53 @@ class DiscreteDTD(DTD):
         return np.einsum("i,ij,ik->jk", self.weights, voigt, voigt)
 
     def signal(self, b_tensor):
-        tensorprods = np.einsum("ijk,jk->i", self.tensors, b_tensor)
-        return np.dot(self.weights, np.exp(-tensorprods))
+        tenso   
 
+
+@functools.lru_cache()
+def _random_orientations(nb_orientations):
+    directions = ms.optimize(1, [nb_orientations], np.array([[1.0]]))
+    return directions
+
+
+def dtd_from_op(orientation_parameter, nb_tensors, micro_fa=1.0, trace=2.0e-3,
+                size_variance=0):
+    """Creates a (discrete) tensor distribution with prescribed orientation 
+    parameter, and (optionally) microscopic fractional anisotropy and trace. 
+    There is no variance in shape (i.e. all tensors in the distribution have 
+    the same triplet of eigenvlaues), the only variance is in orientation.
+
+    Parameters
+    ----------
+    orientation_parameter : double
+    nb_tensors : int
+    micro_fa : double
+    trace : double
+        Mean trace of the individual tensors in the distribution.
+    size_variance : double
+        Corresponds to the C_MD parameter in Westin et al. This is a normalized
+        size variance, between 0 (no variance in size) and 1.
+    """
+    lambda1, lambda2 = _fa_to_evals(micro_fa, trace)
+    if size_variance > 0:
+        shape = (1 - size_variance) / size_variance
+        scale = 1.0 / shape
+        normalized_mds = np.random.gamma(shape, scale, size=nb_tensors)
+    else:
+        normalized_mds = np.ones(nb_tensors)
+    print(np.mean(normalized_mds))
+    directions = _random_orientations(nb_tensors)
+    thetas, phis = sphere.to_spherical(directions)
+    a = np.sqrt(1 - orientation_parameter)
+    new_thetas = np.arcsin(a * np.sin(thetas))
+    new_directions = sphere.to_cartesian(new_thetas, phis)
+    rank1_tensors = np.einsum("ij,ik->ijk", new_directions, new_directions)
+    identities = np.repeat(np.eye(3)[np.newaxis, ...], nb_tensors, axis=0)
+    tensors = lambda2 * identities + (lambda1 - lambda2) * rank1_tensors
+    tensors *= normalized_mds[:, np.newaxis, np.newaxis]
+    weights = np.ones(nb_tensors) / nb_tensors
+    return DiscreteDTD(tensors, weights)
+   
 
 def voigt_6(D):
     """Converts a 3x3 matrix into its 6 dimensional Voigt notation (compatible
@@ -179,7 +234,7 @@ def isotropic_dtd(micro_fa, nb_tensors, trace=2.0e-3):
         Trace of the individual tensors in the distribution.
     """
     lambda1, lambda2 = _fa_to_evals(micro_fa, trace)
-    directions = ms.optimize(1, [nb_tensors], np.array([[1.0]]))
+    directions = _random_orientations(nb_tensors)
     rank1_tensors = np.einsum("ij,ik->ijk", directions, directions)
     identities = np.repeat(np.eye(3)[np.newaxis, ...], nb_tensors, axis=0)
     tensors = lambda2 * identities + (lambda1 - lambda2) * rank1_tensors
@@ -187,46 +242,24 @@ def isotropic_dtd(micro_fa, nb_tensors, trace=2.0e-3):
     return DiscreteDTD(tensors, weights)
    
 
-def dtd_from_op(orientation_parameter, nb_tensors, micro_fa=1.0, trace=2.0e-3):
-    """Creates a (discrete) tensor distribution with prescribed orientation 
-    parameter, and (optionally) microscopic fractional anisotropy and trace. 
-    There is no variance in shape (i.e. all tensors in the distribution have 
-    the same triplet of eigenvlaues), the only variance is in orientation.
-
-    Parameters
-    ----------
-    orientation_parameter : double
-    nb_tensors : int
-    micro_fa : double
-    trace : double
-        Trace of the individual tensors in the distribution.
-    """
-    lambda1, lambda2 = _fa_to_evals(micro_fa, trace)
-    directions = ms.optimize(1, [nb_tensors], np.array([[1.0]]))
-    thetas, phis = sphere.to_spherical(directions)
-    a = np.sqrt(1 - orientation_parameter)
-    new_thetas = np.arcsin(a * np.sin(thetas))
-    new_directions = sphere.to_cartesian(new_thetas, phis)
-    rank1_tensors = np.einsum("ij,ik->ijk", new_directions, new_directions)
-    identities = np.repeat(np.eye(3)[np.newaxis, ...], nb_tensors, axis=0)
-    tensors = lambda2 * identities + (lambda1 - lambda2) * rank1_tensors
-    weights = np.ones(nb_tensors) / nb_tensors
-    return DiscreteDTD(tensors, weights)
-   
 
 if __name__ == "__main__":
-    micro_fa = 0.01
-    nb_tensors = 60
+    micro_fa = 0.5
+    nb_tensors = 250
     dtd1 = isotropic_dtd(micro_fa, nb_tensors)
 
-    gt_ops = np.linspace(0, 1, 10)
-    estimated_ops = []
-    for gt_op in gt_ops:
-        dtd2 = dtd_from_op(gt_op, nb_tensors, micro_fa)
-        estimated_ops.append(dtd2.orientation_parameter())
+    estimated_c_mds = []
+    op = 0.5
+    gt_c_mds = np.linspace(0, 0.25, 10)
+    for gt_c_md in gt_c_mds:
+        dtd2 = dtd_from_op(op, nb_tensors, micro_fa, size_variance=gt_c_md)
+        estimated_c_mds.append(dtd2.size_variance())
+
     from matplotlib import pyplot as plt
-    plt.plot(gt_ops, estimated_ops)
-    plt.plot(gt_ops, gt_ops, "k--")
+    plt.plot(gt_c_mds, estimated_c_mds)
+    plt.plot(gt_c_mds, gt_c_mds, "k--")
+    plt.xlabel("Ground truth $C_\mathrm{MD}$")
+    plt.ylabel("Estimated $C_\mathrm{MD}$")
     plt.show()
 
     exit()
