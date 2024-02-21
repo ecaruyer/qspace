@@ -122,7 +122,8 @@ class DiscreteDTD(DTD):
         return np.einsum("i,ij,ik->jk", self.weights, voigt, voigt)
 
     def signal(self, b_tensor):
-        tenso   
+        tensorprods = np.einsum("ijk,jk->i", self.tensors, b_tensor)
+        return np.dot(self.weights, np.exp(-tensorprods))   
 
 
 @functools.lru_cache()
@@ -219,34 +220,9 @@ def _fa_to_evals(fa, trace):
     return lambda1, lambda2
     
 
-def isotropic_dtd(micro_fa, nb_tensors, trace=2.0e-3):
-    """Creates a (discrete) tensor distribution that is macroscopically
-    isotropic, but with prescribed microscopic fractional anisotropy. There is
-    no variance in shape (i.e. all tensors in the distribution have the same 
-    triplet of eigenvlaues), the only variance is in orientation.
-
-    Parameters
-    ----------
-    micro_fa : double
-        Prescribed microscopic FA.
-    nb_tensors : int
-    trace : double
-        Trace of the individual tensors in the distribution.
-    """
-    lambda1, lambda2 = _fa_to_evals(micro_fa, trace)
-    directions = _random_orientations(nb_tensors)
-    rank1_tensors = np.einsum("ij,ik->ijk", directions, directions)
-    identities = np.repeat(np.eye(3)[np.newaxis, ...], nb_tensors, axis=0)
-    tensors = lambda2 * identities + (lambda1 - lambda2) * rank1_tensors
-    weights = np.ones(nb_tensors) / nb_tensors
-    return DiscreteDTD(tensors, weights)
-   
-
-
 if __name__ == "__main__":
     micro_fa = 0.5
     nb_tensors = 250
-    dtd1 = isotropic_dtd(micro_fa, nb_tensors)
 
     estimated_c_mds = []
     op = 0.5
