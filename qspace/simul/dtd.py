@@ -122,7 +122,8 @@ class DiscreteDTD(DTD):
         return np.einsum("i,ij,ik->jk", self.weights, voigt, voigt)
 
     def signal(self, b_tensor):
-        tenso   
+        tensorprods = np.einsum("ijk,jk->i", self.tensors, b_tensor)
+        return np.dot(self.weights, np.exp(-tensorprods))   
 
 
 @functools.lru_cache()
