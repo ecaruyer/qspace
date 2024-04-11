@@ -58,6 +58,43 @@ def write_camino(waveforms, dt, filename):
             schemefile.write("\n")
     schemefile.close()
 
+def read_mcdc(filename):
+    """
+    Reads a mcdc-compatible scheme file and returns the corresponding 
+    waveforms.
+
+    Parameters
+    ----------
+    filename : string
+
+    Returns
+    -------
+    waveforms : sequence of arrays, each of shape (nb_timesteps, 3)
+        A sequence of arrays of gradient trajectories (unit: T/m).
+    dt : float
+        Timestep (unit: s)
+    """
+    with open(filename, "r") as schemefile:
+        header = schemefile.readline()
+        if header.find("GRADIENT_WAVEFORM") == -1:
+            raise ValueError("Expecting a mcdc-like waveform description.")
+        waveforms = []
+        dt = 0
+        line = schemefile.readline() 
+        values = np.fromstring(line, sep=" ")
+        te = values[0]
+        nb_steps = int(values[1])
+        nb_waveforms = int(values[2])
+        waveform = values[3:]
+        dt = te / nb_steps
+        if waveform.shape[0] != nb_steps * 3 * nb_waveforms:
+            raise ValueError("Incomplete scheme")
+        for i in range(nb_waveforms):
+            wf = waveform[i*nb_steps*3:nb_steps*3*(i+1)]
+            wf = wf.reshape((nb_steps, 3))
+            waveforms.append(wf)
+        return waveforms, dt
+
 
 def read_camino(filename):
     """
