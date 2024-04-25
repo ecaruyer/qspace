@@ -121,9 +121,21 @@ class DiscreteDTD(DTD):
         voigt[:, 3:] *= np.sqrt(2)
         return np.einsum("i,ij,ik->jk", self.weights, voigt, voigt)
 
-    def signal(self, b_tensor):
-        tensorprods = np.einsum("ijk,jk->i", self.tensors, b_tensor)
-        return np.dot(self.weights, np.exp(-tensorprods))   
+    def signal(self, b_tensors):
+        """Computes the signal for a (collection of) b-tensor(s). If a signle
+        b-tensor is given, returns a scalar, otherwise returns a numpy array.
+
+        Parameters
+        ----------
+        b_tensors: array-like, shape (3, 3) or (nb_measurements, 3, 3)
+        """
+        scalar = False
+        if len(b_tensors.shape) == 2:
+            scalar = True
+            b_tensors = b_tensors[np.newaxis, :, :]
+        tensorprods = np.einsum("ijk,ljk->il", self.tensors, b_tensors)
+        signals = np.dot(self.weights, np.exp(-tensorprods))
+        return signals
 
 
 @functools.lru_cache()
