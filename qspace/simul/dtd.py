@@ -140,7 +140,10 @@ class DiscreteDTD(DTD):
 
 @functools.lru_cache()
 def _random_orientations(nb_orientations):
-    directions = ms.optimize(1, [nb_orientations], np.array([[1.0]]))
+    if nb_orientations > 256:
+        directions = sphere.koay(nb_orientations)
+    else:
+        directions = sphere.jones(nb_orientations)
     return directions
 
 

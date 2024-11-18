@@ -28,7 +28,7 @@ class SphericalHarmonics:
 
     
     def _create_from_coefficients(self, coefficients):
-        rank = 2
+        rank = 0
         while True:
             dim_sh = dimension(rank)
             if len(coefficients) == dim_sh:

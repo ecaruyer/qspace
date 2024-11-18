@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import sphere, multishell
+# from qspace.sampling import sphere, multishell
 
 
 def to_cartesian(r, theta, phi):
