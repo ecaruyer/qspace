@@ -26,8 +26,8 @@ def write(bvals, bvecs, filename, format="siemens"):
         epsilon = 1.0e-6
         b_norms = np.sqrt(bvals / (epsilon + np.max(bvals)))
         b_table = b_norms[:, np.newaxis] * bvecs
-        with open(filename, "r") as dvs_file:
-            dvs_file.write("[directions=%d]\n" % nb_acquisitions)
+        with open(filename, "w") as dvs_file:
+            dvs_file.write("[directions=%d]\n" % nb_points)
             dvs_file.write("CoordinateSystem = xyz\n")
             dvs_file.write("Normalisation = none\n")
             for i in range(nb_points):
