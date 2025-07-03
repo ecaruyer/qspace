@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+from qspace.visu import visu_points
+import numpy as np
+from matplotlib import pyplot as plt
+import argparse
+
+description = """Visualize diffusion-encoding gradient directions as described
+in a FSL gradient table"""
+parser = argparse.ArgumentParser(description=description)
+parser.add_argument("-b", dest="bvals", required=True)
+parser.add_argument("-r", dest="bvecs", required=True)
+args = parser.parse_args()
+
+bvals = np.loadtxt(args.bvals)
+bvecs = np.loadtxt(args.bvecs).T
+
+bvals = np.round(bvals, decimals=-2)
+nb_shells = len(np.unique(bvals[bvals > 0]))
+i = 0
+vects = np.zeros((0, 3))
+points_per_shell = []
+rs = []
+for bval in np.unique(bvals):
+    if bval == 0:
+        continue
+    dirs = bvecs[bvals == bval]
+    vects = np.concatenate((vects, dirs))
+    points_per_shell.append(dirs.shape[0])
+    rs.append(np.sqrt(bval / np.max(bvals)))
+
+print(points_per_shell)
+print(vects.shape)
+print(nb_shells)
+fig = plt.figure(figsize=(18, 6))
+visu_points.draw_points_sphere(vects, nb_shells, points_per_shell, rs, 
+                               fig)
+plt.show()
