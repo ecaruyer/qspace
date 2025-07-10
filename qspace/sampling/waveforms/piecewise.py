@@ -87,6 +87,15 @@ class PiecewiseBasis(Sequence):
                 new_constraint[  self.order-j, index2] =  1
                 new_constraint[self.order-j-1, index2] = -1
                 self.constraints.append(new_constraint)
+        else:
+            for j in range(self.order):
+                new_constraint = np.zeros((self.order + 1, 
+                                                  self.nb_intervals))
+                new_constraint[  j, index1] =  sign
+                new_constraint[j+1, index1] = -sign
+                new_constraint[  j, index2] =  1
+                new_constraint[j+1, index2] = -1
+                self.constraints.append(new_constraint)
 
 
     def order_constraint(self, order, interval):
