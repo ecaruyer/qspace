@@ -49,9 +49,9 @@ class SphericalHarmonics:
 
 
     def set_rank(self, value):
-        if self.
-        if value % 2 != 0:
-            raise ValueError("'rank' only accepts even values.")
+        if self.symmetric:
+            if value % 2 != 0:
+                raise ValueError("'rank' only accepts even values.")
         self._rank = value
 
     rank = property(get_rank, set_rank)
