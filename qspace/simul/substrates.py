@@ -8,8 +8,6 @@ class Substrate(ABC):
 
 
 class Free(Substrate):
-
-
     def __init__(self):
         self.camino_options = {"-substrate":  "empty"}
 
@@ -79,9 +77,9 @@ def substrate(**kwargs):
     """Initialize a Substrate instance, picking the subclass corresponding to
     the `name` passed in the parameters.
     """
-    if parameters["name"] == "Free":
+    if kwargs["name"] == "Free":
         return Free()
-    if parameters["name"] == "CylindersLattice":
+    if kwargs["name"] == "CylindersLattice":
         return CylindersLattice(kwargs["radius"], **kwargs)
 
 
