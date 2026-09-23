@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+import numpy as np
+import argparse
+from matplotlib import pyplot as plt
+
+
+def prepend_b0(input_dirs, nb_b0):
+    """
+    Parameters
+    ----------
+    input_dirs : array-like, shape (nb_dirs, 3)
+    nb_b0 : int
+
+    Returns
+    -------
+    output_dirs : array-like, shape (nb_dirs + nb_b0, 3)
+    """
+    nb_dirs = input_dirs.shape[0]
+    nb_acquisitions = nb_dirs + nb_b0
+    result = np.zeros((nb_acquisitions, 3))
+    result[nb_b0:] = dirs
+    return result
+
+
+def interleave_b0(input_dirs, nb_b0):
+    """
+    Parameters
+    ----------
+    input_dirs : array-like, shape (nb_dirs, 3)
+    nb_b0 : int
+
+    Returns
+    -------
+    output_dirs : array-like, shape (nb_dirs + nb_b0, 3)
+    """
+    nb_dirs = input_dirs.shape[0]
+    nb_acquisitions = nb_dirs + nb_b0
+    batch_size = nb_acquisitions // nb_b0
+    result = np.zeros((nb_acquisitions, 3))
+    indices_b0 = np.zeros(nb_acquisitions, dtype=bool)
+    indices_b0[[i * batch_size for i in range(nb_b0)]] = True
+    result[np.logical_not(indices_b0)] = dirs
+    return result
+
+
+def write_dvs(dirs, filename="output.dvs"):
+    """
+    Writes a dvs file from a set of directions; if corresponds to a multishell
+    acquisition, we assume that the input directions are scaled by sqrt(b).
+
+    Parameters
+    ----------
+    dirs : array-like, shape (nb_directions, 3)
+    """
+    nb_acquisitions = dirs.shape[0]
+    with open(filename, "w") as dvs_file:
+        dvs_file.write("[directions=%d]\n" % nb_acquisitions)
+        dvs_file.write("CoordinateSystem = xyz\n")
+        dvs_file.write("Normalisation = none\n")
+        for i in range(nb_acquisitions):
+            dvs_file.write("Vector[%d] = ( %.6f, %.6f, %.6f )\n" % \
+                    (i, dirs[i, 0], dirs[i, 1], dirs[i, 2]))
+        dvs_file.close()
+
+
+if __name__ == "__main__":
+    description = "Creates a dvs file from a set of b-values, number of b=0 and multishell direction sets as generated and downloaded from http://emmanuelcaruyer.com/q-space-sampling.php"
+    
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("input", 
+        help="Multishell direction set from E Caruyer's website.")
+    parser.add_argument("-i", dest="interleave_b0", action="store_true",
+        help="Use this option if you want to interleave b=0 acquisitions.")
+    parser.add_argument("nb_b0", type=int,
+        help="Number of b=0 acquisitions.")
+    parser.add_argument("bvals", type=float, nargs="+",
+        help="List of b-values separated by a space.")
+    parser.add_argument("-o", dest="output", default="output.dvs",
+        help="The output dvs filename.")
+    args = parser.parse_args()
+
+    input_shells = np.loadtxt(args.input)
+    shift = np.min(input_shells[:, 0]) # shell indices start with 0 or 1 ?
+    nb_shells = np.max(input_shells[:, 0]) + 1 - shift
+    assert(len(args.bvals) == nb_shells)
+    bvals = np.array(args.bvals)
+    print(bvals)
+    shell_indices = np.asarray(input_shells[:, 0] - shift, dtype=int)
+    dirs = input_shells[:, 1:]
+    scale = np.sqrt(bvals[shell_indices] / np.max(bvals))
+    dirs *= scale[:, np.newaxis] / np.linalg.norm(dirs, axis=1)[:, np.newaxis]
+
+    if args.interleave_b0:
+        output_dirs = interleave_b0(dirs, args.nb_b0)
+    else:
+        output_dirs = prepend_b0(dirs, args.nb_b0)
+
+    dirs = output_dirs
+    nb_dirs = dirs.shape[0]
+    write_dvs(dirs, filename=args.output)
