@@ -16,7 +16,7 @@ def jones(K):
         return ms.optimize(nb_shells, nb_points_per_shell, weights)
     filename = os.path.join(__location__, "data/jones_%03d.txt" % K)
     dirs = np.loadtxt(filename)
-    return dirs
+    return dirs.reshape((K, 3))
 
 
 def koay(K):

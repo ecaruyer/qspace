@@ -3,10 +3,18 @@
 versatile"""
 from scipy.interpolate import (BPoly, PPoly)
 import numpy as np
+from numpy.testing import assert_almost_equal
 from scipy.linalg import (eigh, null_space)
 from scipy.special import binom
 from matplotlib import pyplot as plt
 from collections.abc import Sequence
+
+
+def _find_nearest(values, value, tol=1.0e-3):
+    nearest = np.argmin(np.abs(np.array(values) - value))
+    if np.abs(values[nearest] - value) > tol:
+        raise ValueError(f"_find_nearest: couldn't find {value} with tol={tol}")
+    return nearest
 
 
 gamma = 267.513e6
@@ -28,7 +36,7 @@ class PiecewiseBasis(Sequence):
         breakpoint[index].
         """
         # raises a ValueError if breakpoint not in self.breakpoints
-        i = self.breakpoints.index(breakpoint)
+        i = _find_nearest(self.breakpoints, breakpoint)
         if i > 0:
             # Add a vanishing constraint at the left of breakpoint
             new_constraint = np.zeros((self.order + 1, self.nb_intervals))
@@ -50,7 +58,7 @@ class PiecewiseBasis(Sequence):
         `smoothness` should be continuous at `breakpoint`.
         """
         # raises a ValueError if breakpoint not in self.breakpoints
-        i = self.breakpoints.index(breakpoint)
+        i = _find_nearest(self.breakpoints, breakpoint)
         intervals = np.diff(self.breakpoints)
         if i == 0 or i == self.nb_intervals:
             return
@@ -73,17 +81,16 @@ class PiecewiseBasis(Sequence):
         refocusing in diffusion MRI.
         """
         assert sign in [-1, 1]
-        index1 = self.breakpoints.index(interval1[0])
-        assert(self.breakpoints.index(interval1[1]) == (index1 + 1))
-        index2 = self.breakpoints.index(interval2[0])
-        assert(self.breakpoints.index(interval2[1]) == (index2 + 1))
+        index1 = _find_nearest(self.breakpoints, interval1[0])
+        assert(_find_nearest(self.breakpoints, interval1[1]) == (index1 + 1))
+        index2 = _find_nearest(self.breakpoints, interval2[0])
+        assert(_find_nearest(self.breakpoints, interval2[1]) == (index2 + 1))
 
         if reverse:
             for j in range(self.order):
-                new_constraint = np.zeros((self.order + 1, 
-                                                  self.nb_intervals))
-                new_constraint[             j, index1] =  sign
-                new_constraint[           j+1, index1] = -sign
+                new_constraint = np.zeros((self.order + 1, self.nb_intervals))
+                new_constraint[             j, index1] = -sign
+                new_constraint[           j+1, index1] =  sign
                 new_constraint[  self.order-j, index2] =  1
                 new_constraint[self.order-j-1, index2] = -1
                 self.constraints.append(new_constraint)
@@ -91,8 +98,8 @@ class PiecewiseBasis(Sequence):
             for j in range(self.order):
                 new_constraint = np.zeros((self.order + 1, 
                                                   self.nb_intervals))
-                new_constraint[  j, index1] = -sign
-                new_constraint[j+1, index1] =  sign
+                new_constraint[  j, index1] =  sign
+                new_constraint[j+1, index1] = -sign
                 new_constraint[  j, index2] =  1
                 new_constraint[j+1, index2] = -1
                 self.constraints.append(new_constraint)
@@ -101,8 +108,8 @@ class PiecewiseBasis(Sequence):
     def order_constraint(self, order, interval):
         """Imposes maximum order over a given interval.
         """
-        index = self.breakpoints.index(interval[0])
-        assert(self.breakpoints.index(interval[1]) == (index + 1))
+        index = _find_nearest(self.breakpoints, interval[0])
+        assert(_find_nearest(self.breakpoints, interval[1]) == (index + 1))
         M = _bernstein_to_power(self.order, interval)
 
         for k in range(order + 1, self.order + 1):
@@ -142,6 +149,7 @@ class PiecewiseBasis(Sequence):
             basis.append(f)
         self.basis = basis
         self.dimension = nb_solutions
+
 
 
     def __getitem__(self, index):
@@ -336,6 +344,57 @@ class QPiecewisePolynomial(PiecewiseBasis):
                 f"order_{self.order}")
 
 
+class QPiecewiseAffine(PiecewiseBasis):
+    """Prepares a basis of q(t) corresponding to piecewise affine gradients.
+    """
+    def __init__(self, delta_rf, delta1, delta2, dt, symmetric=False):
+        n1 = round(delta1 / dt)
+        n2 = round(delta2 / dt)
+        assert_almost_equal(delta1, n1 * dt)       
+        assert_almost_equal(delta2, n2 * dt)
+        
+        breakpoints = [0]
+        for i in range(n1):
+            breakpoints.append((i + 1) * dt)
+        breakpoints.append(breakpoints[-1] + delta_rf)
+        for i in range(n2):
+            breakpoints.append(delta1 + delta_rf + (i + 1) * dt)
+        nb_breakpoints = len(breakpoints)
+        order = 2
+        super().__init__(order, breakpoints)
+
+        te = breakpoints[-1]
+        self.vanishing_constraint(0, k=0)
+        self.vanishing_constraint(te, k=0)
+        self.vanishing_constraint(0, k=1)
+        self.vanishing_constraint(te, k=1)
+        self.vanishing_constraint(delta1, k=1)
+        self.vanishing_constraint(delta1 + delta_rf, k=1)
+        smoothness = 1
+        for breakpoint in breakpoints[1:-1]:
+            self.regularity_constraint(breakpoint, smoothness)
+        interval_rf = [delta1, delta1 + delta_rf]
+        self.order_constraint(0, interval_rf)
+
+        if symmetric:
+            if delta1 != delta2:
+                raise ValueError("Cannot create a symmetric basis with "
+                                 "non-symmetric timings.")
+            for i in range(n1):
+                interval1 = [i * dt, (i + 1) * dt]
+                interval2 = [te - (i + 1) * dt, te - i * dt]
+                self.symmetry_constraint(interval1, interval2, sign=1)
+        self.compute()
+
+
+    def __str__(self):
+        return f"QPiecewiseAffine"
+
+
+ 
+
+
+
 def generate_random(b, basis, gmax=None, smax=None, nb_restart=10):
     """Generates a random waveform in the provided basis with a target b-value.
 
@@ -388,4 +447,5 @@ def generate_random(b, basis, gmax=None, smax=None, nb_restart=10):
         if solution["success"]:
             success = True
     return solution["x"]
+
 
